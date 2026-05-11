@@ -1,0 +1,168 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PurchaseOrderStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum UserRole {
+  ADMIN
+  VIEWER
+}
+
+enum RateInputMethod {
+  WITHOUT_GST
+  WITH_GST_INCLUSIVE
+}
+
+model User {
+  id           String    @id @default(cuid())
+  name         String
+  username     String    @unique
+  passwordHash String    @map("password_hash")
+  role         UserRole
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+model Firm {
+  id              String          @id @default(cuid())
+  name            String
+  gstNumber       String?         @unique
+  address         String?
+  phone           String?
+  email           String?
+  purchaseOrders  PurchaseOrder[]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@map("firms")
+}
+
+model Customer {
+  id              String          @id @default(cuid())
+  name            String
+  gstNumber       String?         @unique
+  contactPerson   String?
+  phone           String?
+  email           String?
+  address         String?
+  purchaseOrders  PurchaseOrder[]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@map("customers")
+}
+
+model Supplier {
+  id             String      @id @default(cuid())
+  name           String
+  gstNumber      String?     @unique
+  contactPerson  String?
+  phone          String?
+  email          String?
+  address        String?
+  dispatches     Dispatch[]
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@map("suppliers")
+}
+
+model CoalSize {
+  id              String          @id @default(cuid())
+  name            String          @unique
+  description     String?
+  purchaseOrders  PurchaseOrder[]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@map("coal_sizes")
+}
+
+model Transporter {
+  id                String      @id @default(cuid())
+  name              String
+  location          String?
+  contactPerson     String?
+  phone             String?
+  vehicleOwnerType  String?
+  remarks           String?
+  dispatches        Dispatch[]
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  @@map("transporters")
+}
+
+model PurchaseOrder {
+  id               String               @id @default(cuid())
+  poNumber         String               @unique
+  poDate           DateTime             @default(now())
+  firmId           String
+  customerId       String
+  coalSizeId       String
+  totalQuantityMt  Decimal              @db.Decimal(12, 3)
+  saleRate         Decimal              @db.Decimal(12, 2)
+  saleRateInputMethod RateInputMethod   @default(WITHOUT_GST)
+  saleGstPercent   Decimal              @map("gstPercent") @db.Decimal(5, 2)
+  tcsApplicable    Boolean              @default(false)
+  status           PurchaseOrderStatus  @default(ACTIVE)
+  remarks          String?
+  firm             Firm                 @relation(fields: [firmId], references: [id], onDelete: Restrict)
+  customer         Customer             @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  coalSize         CoalSize             @relation(fields: [coalSizeId], references: [id], onDelete: Restrict)
+  dispatches       Dispatch[]
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  @@index([firmId])
+  @@index([customerId])
+  @@index([coalSizeId])
+  @@index([status])
+  @@map("purchase_orders")
+}
+
+model Dispatch {
+  id                String         @id @default(cuid())
+  purchaseOrderId   String
+  supplierId        String
+  transporterId     String?
+  vehicleNumber     String
+  dispatchDate      DateTime       @default(now())
+  netQuantityMt     Decimal        @db.Decimal(12, 3)
+  purchaseRate      Decimal        @db.Decimal(12, 2)
+  purchaseRateInputMethod RateInputMethod @default(WITHOUT_GST)
+  purchaseGstPercent Decimal       @default(18) @db.Decimal(5, 2)
+  saleRate          Decimal        @db.Decimal(12, 2)
+  saleRateInputMethod RateInputMethod @default(WITHOUT_GST)
+  saleGstPercent    Decimal        @default(18) @db.Decimal(5, 2)
+  transportCost     Decimal        @default(0) @db.Decimal(12, 2)
+  otherExpensesPercent Decimal     @default(0.5) @db.Decimal(5, 2)
+  goodwillPerMt     Decimal        @default(0) @db.Decimal(12, 2)
+  taxationBasePercent Decimal      @default(2) @db.Decimal(5, 2)
+  taxationRatePercent Decimal      @default(30.4) @db.Decimal(5, 2)
+  remarks           String?
+  purchaseOrder     PurchaseOrder  @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  supplier          Supplier       @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  transporter       Transporter?   @relation(fields: [transporterId], references: [id], onDelete: Restrict)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  @@index([purchaseOrderId])
+  @@index([supplierId])
+  @@index([transporterId])
+  @@index([dispatchDate])
+  @@map("dispatches")
+}
