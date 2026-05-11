@@ -1,7 +1,7 @@
 import type { ApiItem, ApiList } from "../types";
 
 // const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http:///api";
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:4010";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:4010";
 
 type RequestOptions = {
   method?: "GET" | "POST" | "PUT" | "DELETE";
